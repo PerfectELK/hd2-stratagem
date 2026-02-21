@@ -3,7 +3,6 @@ mod utils;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use rdev::{listen, Event, EventType};
 use std::{thread};
-use std::io::{BufRead};
 use std::time::Duration;
 use std::sync::mpsc;
 use utils::log::log;
