@@ -83,8 +83,11 @@ pub fn extract_stratagem_calls() -> Option<Vec<StratagemCall>> {
         if trigger.is_none() {
             continue;
         }
-        let call = extract_call(parts[1])?;
-
+        let call = extract_call(parts[1]);
+        if call.is_none() {
+            continue;
+        }
+        let call = call.unwrap();
         stratagem_calls.push(StratagemCall::new(trigger.unwrap(), call.0, call.1));
     }
 
