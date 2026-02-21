@@ -1,22 +1,15 @@
 mod utils;
 
-use std::fs::File;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
-use rdev::{listen, Event, EventType, Key as RdevKey};
+use rdev::{listen, Event, EventType};
 use std::{thread};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead};
 use std::time::Duration;
-use std::option::Option;
 use std::sync::mpsc;
-use utils::str_helper::str_to_key;
 use utils::log::log;
 use crate::utils::log::LogType;
-use utils::stratagems::{STRATAGEM_MAP, REVERSED_STRATAGEM_MAP};
-
-const W: u16 = 0x11;
-const A: u16 = 0x1E;
-const S: u16 = 0x1F;
-const D: u16 = 0x20;
+use std::collections::HashSet;
+use utils::stratagems::{extract_stratagem_calls,StratagemCall};
 
 fn main() {
     let stratagems_cont = extract_stratagem_calls();
@@ -41,19 +34,45 @@ fn main() {
         key_handler(rx);
     });
 
+    let mut pressed_keys = HashSet::new();
+    let mut active_triggers = HashSet::new();
 
     let callback = move |event: Event| {
-        if let EventType::KeyPress(key) = event.event_type {
-            for strat in &stratagems {
-                if strat.trigger == key {
-                    let _ = tx.send(StratagemCall::new(strat.trigger, strat.call.clone(), strat.call_label.clone()));
+        match event.event_type {
+            EventType::KeyPress(key) => {
+                pressed_keys.insert(key);
+
+                for (idx, strat) in stratagems.iter().enumerate() {
+                    let is_active = strat.trigger.iter().all(|k| pressed_keys.contains(k));
+
+                    if is_active && !active_triggers.contains(&idx) {
+                        let _ = tx.send(StratagemCall::new(
+                            strat.trigger.clone(),
+                            strat.call.clone(),
+                            strat.call_label.clone(),
+                        ));
+                        active_triggers.insert(idx);
+                    }
                 }
             }
+
+            EventType::KeyRelease(key) => {
+                pressed_keys.remove(&key);
+
+                active_triggers.retain(|idx| {
+                    stratagems[*idx]
+                        .trigger
+                        .iter()
+                        .all(|k| pressed_keys.contains(k))
+                });
+            }
+
+            _ => {}
         }
     };
 
     if let Err(error) = listen(callback) {
-        log(format!("Ошибка при прослушивании событий: {:?}", error), LogType::Error);
+        log(format!("Error when listen events: {:?}", error), LogType::Error);
     }
 
     handle.join().unwrap();
@@ -65,7 +84,7 @@ fn key_handler(rx: mpsc::Receiver<StratagemCall>) {
     while let Ok(strat) = rx.recv() {
         log(format!(
             "event received, trigger: {:?}, call: {:?}, directions: {:?}",
-            strat.trigger, strat.call_label, strat.call
+            strat.trigger, strat.call_label, strat.human_call()
         ), LogType::Info);
         enigo.key(Key::Control, Direction::Press).unwrap();
         thread::sleep(Duration::from_millis(60));
@@ -79,86 +98,4 @@ fn key_handler(rx: mpsc::Receiver<StratagemCall>) {
         thread::sleep(Duration::from_millis(60));
         enigo.key(Key::Control, Direction::Release).unwrap();
     }
-}
-
-
-struct StratagemCall {
-    trigger: RdevKey,
-    call: Vec<u16>,
-    call_label: String,
-}
-
-impl StratagemCall {
-    fn new(
-        trigger: RdevKey,
-        call: Vec<u16>,
-        mut call_label: String,
-    ) -> StratagemCall {
-        if call_label == "" {
-            call_label = String::from("no name");
-        }
-        StratagemCall {
-            trigger,
-            call,
-            call_label,
-        }
-    }
-
-    fn human_call(&self) -> String {
-        let mut s = String::new();
-        for ch in self.call.iter() {
-            let key = match ch {
-                &W => "w", &S => "s", &A => "a", &D => "d",
-                _ => "",
-            };
-            s.push_str(key);
-        }
-        s
-    }
-}
-
-fn extract_stratagem_calls() -> Option<Vec<StratagemCall>> {
-    let file = File::open("config.txt").ok()?;
-    let mut stratagem_calls: Vec<StratagemCall>= Vec::new();
-    let reader = BufReader::new(file);
-
-
-    for line in reader.lines() {
-        let line_str = line.ok()?;
-        let parts: Vec<_> = line_str.split_whitespace().collect();
-        if parts.len() != 2 {
-            continue;
-        }
-        let trigger = str_to_key(parts[0]);
-        if trigger.is_none() {
-            continue;
-        }
-        let trigger:RdevKey = trigger.unwrap();
-        let mut call_str = parts[1];
-        let mut call_label = String::from("no name");
-
-        let call_from_map = STRATAGEM_MAP.get(call_str).unwrap_or(&"");
-        if call_from_map != &"" {
-            call_label = String::from(call_str);
-            call_str = call_from_map;
-        }
-        if call_label == "no name" {
-            let reversed_call_from_map = REVERSED_STRATAGEM_MAP.get(call_str).unwrap_or(&"");
-            if reversed_call_from_map != &"" {
-                call_label = String::from(*reversed_call_from_map);
-            }
-        }
-
-        let mut call: Vec<u16> = Vec::new();
-        for ch in call_str.to_lowercase().chars() {
-            let key = match ch {
-                'w' => W, 's' => S, 'a' => A, 'd' => D,
-                _ => return None,
-            };
-            call.push(key);
-        }
-        stratagem_calls.push(StratagemCall::new(trigger, call, call_label));
-    }
-
-    Some(stratagem_calls)
 }
