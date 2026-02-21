@@ -1,6 +1,6 @@
 [package]
-name = "hd2-aboba"
-version = "0.1.0"
+name = "hd2-stratagem"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies]
