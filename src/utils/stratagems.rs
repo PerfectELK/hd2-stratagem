@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
-pub static StratagemMap: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+pub static STRATAGEM_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert("feminism", "wdsss");
     m.insert("supply", "sswd");
@@ -15,9 +15,9 @@ pub static StratagemMap: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m
 });
 
-pub static  ReversedStratagemMap: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+pub static REVERSED_STRATAGEM_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
-    for (k, v) in StratagemMap.iter() {
+    for (k, v) in STRATAGEM_MAP.iter() {
         m.insert(*v, *k);
     }
     m

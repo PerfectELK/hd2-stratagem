@@ -11,7 +11,7 @@ use std::sync::mpsc;
 use utils::str_helper::str_to_key;
 use utils::log::log;
 use crate::utils::log::LogType;
-use utils::stratagems::{StratagemMap,ReversedStratagemMap};
+use utils::stratagems::{STRATAGEM_MAP, REVERSED_STRATAGEM_MAP};
 
 const W: u16 = 0x11;
 const A: u16 = 0x1E;
@@ -137,15 +137,15 @@ fn extract_stratagem_calls() -> Option<Vec<StratagemCall>> {
         let mut call_str = parts[1];
         let mut call_label = String::from("no name");
 
-        let call_from_map = StratagemMap[call_str];
-        if call_from_map != "" {
+        let call_from_map = STRATAGEM_MAP.get(call_str).unwrap_or(&"");
+        if call_from_map != &"" {
             call_label = String::from(call_str);
             call_str = call_from_map;
         }
         if call_label == "no name" {
-            let reversed_call_from_map = ReversedStratagemMap[call_str];
-            if reversed_call_from_map != "" {
-                call_label = String::from(reversed_call_from_map);
+            let reversed_call_from_map = REVERSED_STRATAGEM_MAP.get(call_str).unwrap_or(&"");
+            if reversed_call_from_map != &"" {
+                call_label = String::from(*reversed_call_from_map);
             }
         }
 
