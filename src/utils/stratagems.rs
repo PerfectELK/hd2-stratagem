@@ -13,7 +13,7 @@ const D: u16 = 0x20;
 
 pub static STRATAGEM_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
-    m.insert("feminism", "wdsss");
+    m.insert("femoid", "wdsss");
     m.insert("supply", "sswd");
     m.insert("res", "wsdaw");
     m.insert("sos", "wsdw");
