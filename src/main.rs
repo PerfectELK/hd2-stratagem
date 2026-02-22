@@ -23,7 +23,7 @@ fn main() {
     for stratagem in stratagems.iter().clone() {
         log(format!(
             "trigger: {:?}, stratagem: {:?}, call: {:?}",
-            stratagem.trigger, stratagem.call_label, stratagem.human_call()
+            stratagem.trigger_in_order, stratagem.call_label, stratagem.human_call()
         ), LogType::Info);
     }
     let (tx, rx) = mpsc::channel::<StratagemCall>();
@@ -47,6 +47,7 @@ fn main() {
                     if is_active && !active_triggers.contains(&idx) {
                         let _ = tx.send(StratagemCall::new(
                             strat.trigger.clone(),
+                            strat.trigger_in_order.clone(),
                             strat.call.clone(),
                             strat.call_label.clone(),
                         ));
@@ -83,7 +84,7 @@ fn key_handler(rx: mpsc::Receiver<StratagemCall>) {
     while let Ok(strat) = rx.recv() {
         log(format!(
             "event received, trigger: {:?}, call: {:?}, directions: {:?}",
-            strat.trigger, strat.call_label, strat.human_call()
+            strat.trigger_in_order, strat.call_label, strat.human_call()
         ), LogType::Info);
         enigo.key(Key::Control, Direction::Press).unwrap();
         thread::sleep(Duration::from_millis(60));

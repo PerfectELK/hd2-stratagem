@@ -33,14 +33,16 @@ pub static REVERSED_STRATAGEM_MAP: Lazy<HashMap<&'static str, &'static str>> = L
 });
 
 pub struct StratagemCall {
-    pub(crate) trigger: HashSet<RdevKey>,
-    pub(crate) call: Vec<u16>,
-    pub(crate) call_label: String,
+    pub trigger: HashSet<RdevKey>,
+    pub trigger_in_order: Vec<RdevKey>,
+    pub call: Vec<u16>,
+    pub call_label: String,
 }
 
 impl StratagemCall {
     pub(crate) fn new(
         trigger: HashSet<RdevKey>,
+        trigger_in_order: Vec<RdevKey>,
         call: Vec<u16>,
         mut call_label: String,
     ) -> StratagemCall {
@@ -49,6 +51,7 @@ impl StratagemCall {
         }
         StratagemCall {
             trigger,
+            trigger_in_order,
             call,
             call_label,
         }
@@ -83,29 +86,32 @@ pub fn extract_stratagem_calls() -> Option<Vec<StratagemCall>> {
         if trigger.is_none() {
             continue;
         }
+        let trigger = trigger.unwrap();
         let call = extract_call(parts[1]);
         if call.is_none() {
             continue;
         }
         let call = call.unwrap();
-        stratagem_calls.push(StratagemCall::new(trigger.unwrap(), call.0, call.1));
+        stratagem_calls.push(StratagemCall::new(trigger.0, trigger.1, call.0, call.1));
     }
 
     Some(stratagem_calls)
 }
 
 
-fn extract_trigger(mut trigger_str: &str) -> Option<HashSet<RdevKey>> {
+fn extract_trigger(mut trigger_str: &str) -> Option<Box<(HashSet<RdevKey>, Vec<RdevKey>)>> {
     trigger_str = trigger_str.trim();
     if trigger_str.is_empty() {
         return None
     }
     let mut hash: HashSet<RdevKey> = HashSet::new();
+    let mut trigger_arr: Vec<RdevKey> = Vec::new();
     let trigger = str_to_key(trigger_str);
     if trigger.is_some() {
         let trigger:RdevKey = trigger.unwrap();
         hash.insert(trigger);
-        return Some(hash)
+        trigger_arr.push(trigger);
+        return Some(Box::new((hash, trigger_arr)))
     }
     let first = trigger_str.chars().next().unwrap();
     let last = trigger_str.chars().last().unwrap();
@@ -121,8 +127,9 @@ fn extract_trigger(mut trigger_str: &str) -> Option<HashSet<RdevKey>> {
             return None
         }
         hash.insert(trigger.unwrap());
+        trigger_arr.push(trigger.unwrap());
     }
-    Some(hash)
+    Some(Box::new((hash, trigger_arr)))
 }
 
 
