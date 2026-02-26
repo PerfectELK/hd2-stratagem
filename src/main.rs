@@ -2,16 +2,23 @@ mod utils;
 
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use rdev::{listen, Event, EventType};
-use std::{thread};
+use std::{env, fs, thread};
 use std::time::Duration;
 use std::sync::mpsc;
 use utils::log::log;
 use crate::utils::log::LogType;
 use std::collections::HashSet;
-use utils::stratagems::{extract_stratagem_calls,StratagemCall};
+use utils::stratagems::{extract_stratagem_calls, StratagemCall};
+use dialoguer::{Select, console::Term};
+use dialoguer::theme::ColorfulTheme;
 
 fn main() {
-    let stratagems_cont = extract_stratagem_calls();
+    let filename = get_config_file_name();
+    if filename.is_none() {
+        log("error when get config file name", LogType::Error);
+    }
+    let filename = filename.unwrap();
+    let stratagems_cont = extract_stratagem_calls(filename.as_str());
     if stratagems_cont.is_none() {
         log("stratagems not provided", LogType::Error);
     }
@@ -97,5 +104,46 @@ fn key_handler(rx: mpsc::Receiver<StratagemCall>) {
         }
         thread::sleep(Duration::from_millis(60));
         enigo.key(Key::Control, Direction::Release).unwrap();
+    }
+}
+
+fn get_config_file_name() -> Option<String> {
+    let current_dir = env::current_dir().ok()?;
+    let entries = fs::read_dir(current_dir).ok()?;
+
+    let txt_files: Vec<_> = entries.filter_map(|entry|{
+        let entry = entry.ok()?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext == "txt" {
+                    return Some(entry.file_name().into_string().ok()?);
+                }
+            }
+        }
+        None
+    }).collect();
+
+    if txt_files.is_empty() {
+        return None
+    }
+
+    if txt_files.len() == 1 {
+        return Some(txt_files[0].clone())
+    }
+
+    let selection = Select::with_theme(&ColorfulTheme::default()).with_prompt(
+        "Please select a config file"
+    ).items(&txt_files).interact_on_opt(&Term::stderr()).ok()?;
+
+    match selection {
+        Some(index) => {
+            Some(txt_files[index].clone())
+        }
+        None => {
+            log("Select was canceled", LogType::Error);
+            None
+        }
     }
 }

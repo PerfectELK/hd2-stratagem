@@ -70,8 +70,8 @@ impl StratagemCall {
     }
 }
 
-pub fn extract_stratagem_calls() -> Option<Vec<StratagemCall>> {
-    let file = File::open("config.txt").ok()?;
+pub fn extract_stratagem_calls(file_name: &str) -> Option<Vec<StratagemCall>> {
+    let file = File::open(file_name).ok()?;
     let mut stratagem_calls: Vec<StratagemCall>= Vec::new();
     let reader = BufReader::new(file);
 
