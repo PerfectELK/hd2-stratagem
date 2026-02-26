@@ -6,6 +6,7 @@ use chrono::{Local, SecondsFormat};
 pub enum LogType {
     Error,
     Info,
+    Debug,
 }
 
 pub fn log<T:Display >(value: T, lt: LogType) {
@@ -17,5 +18,9 @@ pub fn log<T:Display >(value: T, lt: LogType) {
             process::exit(-1)
         },
         LogType::Info => println!("{}: {}", now.to_rfc3339_opts(SecondsFormat::Secs, false), value),
+        LogType::Debug => {
+            #[cfg(debug_assertions)]
+            println!("{}: {}", now.to_rfc3339_opts(SecondsFormat::Secs, false), value)
+        }
     }
 }

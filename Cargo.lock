@@ -377,6 +377,7 @@ dependencies = [
  "once_cell",
  "rdev",
  "time",
+ "windows",
 ]
 
 [[package]]

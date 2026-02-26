@@ -4,9 +4,10 @@ use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use rdev::{listen, Event, EventType};
 use std::{env, fs, thread};
 use std::time::Duration;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 use utils::log::log;
 use crate::utils::log::LogType;
+use crate::utils::windows::{get_active_window_info,is_hd2};
 use std::collections::HashSet;
 use utils::stratagems::{extract_stratagem_calls, StratagemCall};
 use dialoguer::{Select, console::Term};
@@ -43,7 +44,16 @@ fn main() {
     let mut pressed_keys = HashSet::new();
     let mut active_triggers = HashSet::new();
 
+    let is_hd2_current_app: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    let monitor = is_hd2_current_app.clone();
+    monitor_current_app(monitor);
+
     let callback = move |event: Event| {
+        if !*is_hd2_current_app.lock().unwrap() {
+            pressed_keys.clear();
+            active_triggers.clear();
+            return;
+        }
         match event.event_type {
             EventType::KeyPress(key) => {
                 pressed_keys.insert(key);
@@ -146,4 +156,19 @@ fn get_config_file_name() -> Option<String> {
             None
         }
     }
+}
+
+fn monitor_current_app(monitor: Arc<Mutex<bool>>) {
+    thread::spawn(move || {
+        loop {
+            if let Some(name) = get_active_window_info() {
+                log(format!("App name: {:?}", name.to_lowercase()), LogType::Debug);
+                let is_hd2 = is_hd2(name);
+                let mut data = monitor.lock().unwrap();
+                *data = is_hd2;
+            }
+
+            thread::sleep(Duration::from_millis(1000));
+        }
+    });
 }
